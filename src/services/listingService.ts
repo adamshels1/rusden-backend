@@ -104,27 +104,18 @@ export class ListingService {
   ): Promise<void> {
     const { error } = await supabase.from('listings').insert({
       raw_message_id: rawMessageId,
-      category: aiResult.category,
-      subcategory: aiResult.subcategory,
-      title: aiResult.title,
-      description: null,
-      price_amount: aiResult.price_amount,
-      price_currency: aiResult.price_currency,
-      price_period: aiResult.price_period,
-      city: aiResult.city,
-      district: aiResult.district,
-      contact_phone: aiResult.contact_phone,
-      contact_telegram: aiResult.contact_telegram,
-      contact_other: null,
-      realty_rooms: aiResult.realty_rooms,
-      realty_area_sqm: aiResult.realty_area_sqm,
-      realty_floor: aiResult.realty_floor,
-      realty_distance_to_sea: aiResult.realty_distance_to_sea,
-      language: aiResult.language,
-      is_spam: aiResult.is_spam,
-      is_duplicate: false,
-      ai_confidence: aiResult.confidence,
-      ai_processing_status: status,
+      category: aiResult.category || 'goods',
+      title: aiResult.title || 'Без названия',
+      description: aiResult.description || '',
+      price: aiResult.price_amount,
+      currency: aiResult.price_currency,
+      location: aiResult.city || aiResult.district,
+      contact_info: {
+        phone: aiResult.contact_phone,
+        telegram: aiResult.contact_telegram,
+      },
+      posted_date: new Date().toISOString(),
+      ai_confidence: aiResult.confidence || 0.5,
     });
 
     if (error) {
@@ -143,25 +134,24 @@ export class ListingService {
   }) {
     let query = supabase
       .from('listings')
-      .select('*, raw_messages(*)')
-      .eq('ai_processing_status', 'completed')
-      .eq('is_spam', false)
-      .order('created_at', { ascending: false });
+      .select('*')
+      .eq('is_active', true)
+      .order('posted_date', { ascending: false });
 
     if (filters.category) {
       query = query.eq('category', filters.category);
     }
 
     if (filters.city) {
-      query = query.eq('city', filters.city);
+      query = query.ilike('location', `%${filters.city}%`);
     }
 
     if (filters.minPrice) {
-      query = query.gte('price_amount', filters.minPrice);
+      query = query.gte('price', filters.minPrice);
     }
 
     if (filters.maxPrice) {
-      query = query.lte('price_amount', filters.maxPrice);
+      query = query.lte('price', filters.maxPrice);
     }
 
     const { data, error } = await query
