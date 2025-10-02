@@ -10,6 +10,8 @@ const supabase = createClient(
 );
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const BUCKET_NAME = 'listings-images';
+const IMAGES_DIR = path.resolve(__dirname, '../telegram-parser/images');
 
 const SYSTEM_PROMPT = `Ты — AI-агент для классификации объявлений из русскоязычных Telegram-каналов в Турции.
 
@@ -67,6 +69,54 @@ async function categorizeMessage(text) {
   });
 
   return JSON.parse(completion.choices[0].message.content);
+}
+
+async function uploadImageToSupabase(filename) {
+  const filePath = path.join(IMAGES_DIR, filename);
+
+  // Проверяем существование файла
+  if (!fs.existsSync(filePath)) {
+    console.log(`   ⚠️  Файл не найден: ${filename}`);
+    return null;
+  }
+
+  // Проверяем, не загружен ли уже
+  const { data: existingFile } = await supabase.storage
+    .from(BUCKET_NAME)
+    .list('', { search: filename });
+
+  if (existingFile && existingFile.length > 0) {
+    // Уже загружен, возвращаем URL
+    const { data } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filename);
+    return data.publicUrl;
+  }
+
+  // Загружаем файл (уже сжатый при парсинге)
+  const fileBuffer = fs.readFileSync(filePath);
+  const fileSize = fileBuffer.length;
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET_NAME)
+    .upload(filename, fileBuffer, {
+      contentType: 'image/jpeg',
+      cacheControl: '3600',
+      upsert: false
+    });
+
+  if (error) {
+    console.log(`   ❌ Ошибка загрузки ${filename}:`, error.message);
+    return null;
+  }
+
+  // Получаем публичный URL
+  const { data: urlData } = supabase.storage
+    .from(BUCKET_NAME)
+    .getPublicUrl(filename);
+
+  console.log(`   📤 ${filename} (${Math.round(fileSize/1024)}KB)`);
+  return urlData.publicUrl;
 }
 
 async function processMessages() {
@@ -144,6 +194,18 @@ async function processMessages() {
       console.log('🤖 Обработка через AI...');
       const aiResult = await categorizeMessage(msg.text);
 
+      // Загружаем картинки в Supabase Storage
+      const imageUrls = [];
+      if (msg.images && msg.images.length > 0) {
+        console.log(`📸 Загрузка ${msg.images.length} картинок...`);
+        for (const imageName of msg.images) {
+          const imageUrl = await uploadImageToSupabase(imageName);
+          if (imageUrl) {
+            imageUrls.push(imageUrl);
+          }
+        }
+      }
+
       // Создаем listing (используем актуальную схему базы данных)
       const location = aiResult.location?.city
         ? `${aiResult.location.city}${aiResult.location.district ? ', ' + aiResult.location.district : ''}`
@@ -164,7 +226,7 @@ async function processMessages() {
             telegram: aiResult.contact?.telegram,
             other: aiResult.contact?.other,
           },
-          images: msg.images || [],
+          images: imageUrls, // Теперь сохраняем полные URL из Supabase Storage
           posted_date: msg.date,
           ai_confidence: aiResult.confidence,
         })
