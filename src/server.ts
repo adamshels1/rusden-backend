@@ -9,6 +9,7 @@ if (env.NODE_ENV !== 'production') {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`📋 API: http://localhost:${PORT}/api/listings`);
+    console.log(`📚 API Docs (Swagger): http://localhost:${PORT}/api-docs`);
   });
 }
 

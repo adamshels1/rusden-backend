@@ -16,7 +16,75 @@ const listingsQuerySchema = z.object({
   offset: z.coerce.number().min(0).default(0),
 });
 
-// GET /api/listings - получить список объявлений
+/**
+ * @openapi
+ * /api/listings:
+ *   get:
+ *     tags:
+ *       - Listings
+ *     summary: Получить список объявлений
+ *     description: Возвращает список объявлений с возможностью фильтрации по категории, городу и цене
+ *     parameters:
+ *       - name: category
+ *         in: query
+ *         description: Категория объявления
+ *         schema:
+ *           type: string
+ *           enum: [realty, job, service, goods, event]
+ *         example: realty
+ *       - name: city
+ *         in: query
+ *         description: Город (поиск по подстроке)
+ *         schema:
+ *           type: string
+ *         example: Alanya
+ *       - name: minPrice
+ *         in: query
+ *         description: Минимальная цена
+ *         schema:
+ *           type: number
+ *         example: 10000
+ *       - name: maxPrice
+ *         in: query
+ *         description: Максимальная цена
+ *         schema:
+ *           type: number
+ *         example: 50000
+ *       - name: limit
+ *         in: query
+ *         description: Количество результатов (максимум 100)
+ *         schema:
+ *           type: number
+ *           default: 20
+ *           minimum: 1
+ *           maximum: 100
+ *       - name: offset
+ *         in: query
+ *         description: Смещение для пагинации
+ *         schema:
+ *           type: number
+ *           default: 0
+ *           minimum: 0
+ *     responses:
+ *       200:
+ *         description: Список объявлений
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ListingsResponse'
+ *       400:
+ *         description: Неверные параметры запроса
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Внутренняя ошибка сервера
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/', async (req, res) => {
   try {
     const filters = listingsQuerySchema.parse(req.query);
@@ -47,7 +115,48 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/listings/:id - получить конкретное объявление
+/**
+ * @openapi
+ * /api/listings/{id}:
+ *   get:
+ *     tags:
+ *       - Listings
+ *     summary: Получить объявление по ID
+ *     description: Возвращает одно объявление с полной информацией
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: UUID объявления
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Объявление найдено
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Listing'
+ *       404:
+ *         description: Объявление не найдено
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Внутренняя ошибка сервера
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/:id', async (req, res) => {
   try {
     const { data, error } = await supabase
