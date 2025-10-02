@@ -84,7 +84,7 @@ ${text}
 
     try {
       const completion = await groq.chat.completions.create({
-        model: 'llama-3.1-70b-versatile', // Бесплатная модель Groq
+        model: 'llama-3.3-70b-versatile', // Бесплатная модель Groq
         messages: [
           { role: 'system', content: this.systemPrompt },
           { role: 'user', content: userPrompt },
