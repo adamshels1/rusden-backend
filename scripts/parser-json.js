@@ -127,8 +127,8 @@ async function getChannelMessages(username, retryCount = 0) {
   console.log('\n🚀 Запуск парсера с сохранением в JSON...\n');
 
   const channels = [
-    'realty_in_turkey', 
-    // 'antalia_sales'
+    // 'realty_in_turkey', 
+    'antalia_sales'
   ];
   const parsedData = [];
 

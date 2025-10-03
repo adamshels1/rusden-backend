@@ -73,6 +73,70 @@ router.get('/categories', async (req, res) => {
 
 /**
  * @openapi
+ * /api/listings/subcategories:
+ *   get:
+ *     tags:
+ *       - Listings
+ *     summary: Получить список подкатегорий
+ *     description: Возвращает список всех уникальных подкатегорий из объявлений
+ *     parameters:
+ *       - name: category
+ *         in: query
+ *         description: Фильтр по категории
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Список подкатегорий
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ */
+router.get('/subcategories', async (req, res) => {
+  try {
+    let query = supabase
+      .from('listings')
+      .select('subcategory')
+      .not('subcategory', 'is', null);
+
+    if (req.query.category) {
+      query = query.eq('category', req.query.category);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    const subcategories = [...new Set(
+      data
+        .map((item: any) => item.subcategory)
+        .filter(Boolean)
+    )].sort();
+
+    res.json({
+      success: true,
+      data: subcategories,
+    });
+  } catch (error) {
+    console.error('Error fetching subcategories:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+    });
+  }
+});
+
+/**
+ * @openapi
  * /api/listings/cities:
  *   get:
  *     tags:
