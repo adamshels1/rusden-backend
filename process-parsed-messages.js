@@ -55,8 +55,15 @@ const SYSTEM_PROMPT = `Ты — AI-агент для классификации 
   "confidence": 0.0-1.0
 }`;
 
-async function categorizeMessage(text) {
-  const userPrompt = `Классифицируй это объявление:\n\n${text}`;
+async function categorizeMessage(text, author) {
+  let userPrompt = `Классифицируй это объявление:\n\n${text}`;
+
+  // Добавляем контакты автора если есть
+  if (author) {
+    userPrompt += `\n\nКонтактная информация автора:\n`;
+    if (author.phone) userPrompt += `Телефон: ${author.phone}\n`;
+    if (author.username) userPrompt += `Telegram: @${author.username}\n`;
+  }
 
   const completion = await groq.chat.completions.create({
     model: 'llama-3.1-8b-instant',
@@ -195,7 +202,7 @@ async function processMessages() {
     // Категоризируем через AI
     try {
       console.log('🤖 Обработка через AI...');
-      const aiResult = await categorizeMessage(msg.text);
+      const aiResult = await categorizeMessage(msg.text, msg.author);
 
       // Задержка 2 секунды между AI-запросами
       await delay(2000);
