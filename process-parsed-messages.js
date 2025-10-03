@@ -225,6 +225,16 @@ async function processMessages() {
         continue;
       }
 
+      // Фильтрация нежелательного контента
+      const spamKeywords = /бар|клуб|стрип|ночной|массаж|эскорт|интим|девушк[иа]\s+для|хостес|танцовщиц/i;
+      const textToCheck = `${aiResult.title} ${aiResult.description} ${aiResult.subcategory || ''}`;
+
+      if (spamKeywords.test(textToCheck)) {
+        console.log('⏭️  Пропускаем: нежелательный контент');
+        skipped++;
+        continue;
+      }
+
       // Очищаем telegram от @ если AI его добавил
       if (aiResult.contact?.telegram) {
         aiResult.contact.telegram = aiResult.contact.telegram.replace(/^@/, '');
