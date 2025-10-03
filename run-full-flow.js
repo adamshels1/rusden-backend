@@ -6,8 +6,7 @@ const fs = require('fs');
 console.log('🚀 Запуск полного флоу парсинга Telegram каналов\n');
 
 const CHANNELS = [
-  { username: 'alanyadom', title: 'Alanya Недвижимость' },
-  { username: 'AntalyaLife', title: 'Анталия Life' },
+  { username: '@realty_in_turkey', title: 'Турция недвижимость | Аренда' },
 ];
 
 async function runFullFlow() {
