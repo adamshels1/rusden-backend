@@ -22,7 +22,7 @@ async function runFullFlow() {
 
       try {
         execSync(
-          `cd ../telegram-parser && node parser-json.js ${channel.username}`,
+          `cd scripts && node parser-json.js ${channel.username}`,
           {
             stdio: 'inherit',
             timeout: 120000 // 2 минуты на канал
@@ -35,7 +35,7 @@ async function runFullFlow() {
     }
 
     // Проверяем наличие файла
-    const parsedFile = path.resolve(__dirname, '../telegram-parser/parsed_messages.json');
+    const parsedFile = path.resolve(__dirname, 'scripts/parsed_messages.json');
     if (!fs.existsSync(parsedFile)) {
       console.log('❌ Файл parsed_messages.json не найден');
       return;

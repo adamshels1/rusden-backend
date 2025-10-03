@@ -11,7 +11,7 @@ const supabase = createClient(
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const BUCKET_NAME = 'listings-images';
-const IMAGES_DIR = path.resolve(__dirname, '../telegram-parser/images');
+const IMAGES_DIR = path.resolve(__dirname, 'scripts/images');
 
 const SYSTEM_PROMPT = `Ты — AI-агент для классификации объявлений из русскоязычных Telegram-каналов в Турции.
 
@@ -123,7 +123,7 @@ async function processMessages() {
   console.log('🚀 Обработка спарсенных сообщений\n');
 
   // Читаем спарсенные сообщения
-  const parsedPath = path.resolve(__dirname, '../telegram-parser/parsed_messages.json');
+  const parsedPath = path.resolve(__dirname, 'scripts/parsed_messages.json');
   const messages = JSON.parse(fs.readFileSync(parsedPath, 'utf8'));
 
   console.log(`📊 Найдено ${messages.length} сообщений\n`);
