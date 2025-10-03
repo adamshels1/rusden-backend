@@ -8,7 +8,7 @@ const listingService = new ListingService();
 
 // Схема валидации фильтров
 const listingsQuerySchema = z.object({
-  category: z.enum(['realty', 'job', 'service', 'goods', 'car_rental', 'event']).optional(),
+  category: z.enum(['realty', 'job', 'service', 'goods', 'auto', 'event']).optional(),
   subcategory: z.string().optional(),
   location: z.string().optional(),
   city: z.string().optional(), // для обратной совместимости
