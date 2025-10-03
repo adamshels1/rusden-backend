@@ -4,11 +4,11 @@ import { supabase } from '../config/supabase';
 import { TelegramMessage } from '../types';
 
 export class ParserService {
-  private parserDataPath = path.resolve(__dirname, '../../../telegram-parser/parsed_messages.json');
+  private parserDataPath = path.resolve(__dirname, '../../scripts/parsed_messages.json');
 
   async parseChannel(username: string): Promise<TelegramMessage[]> {
-    // TODO: интеграция с telegram-parser
-    // Пока возвращаем пустой массив
+    // Парсинг через скрипты в scripts/
+    // Используйте npm run parse:full для запуска полного парсинга
     return [];
   }
 
