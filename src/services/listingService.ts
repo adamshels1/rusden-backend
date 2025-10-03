@@ -126,7 +126,9 @@ export class ListingService {
 
   async getListings(filters: {
     category?: string;
+    subcategory?: string;
     city?: string;
+    search?: string;
     minPrice?: number;
     maxPrice?: number;
     limit?: number;
@@ -142,8 +144,16 @@ export class ListingService {
       query = query.eq('category', filters.category);
     }
 
+    if (filters.subcategory) {
+      query = query.eq('subcategory', filters.subcategory);
+    }
+
     if (filters.city) {
       query = query.ilike('location', `%${filters.city}%`);
+    }
+
+    if (filters.search) {
+      query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
     }
 
     if (filters.minPrice) {

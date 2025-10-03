@@ -8,8 +8,11 @@ const listingService = new ListingService();
 
 // Схема валидации фильтров
 const listingsQuerySchema = z.object({
-  category: z.enum(['realty', 'job', 'service', 'goods', 'event']).optional(),
-  city: z.string().optional(),
+  category: z.enum(['realty', 'job', 'service', 'goods', 'car_rental', 'event']).optional(),
+  subcategory: z.string().optional(),
+  location: z.string().optional(),
+  city: z.string().optional(), // для обратной совместимости
+  search: z.string().optional(),
   minPrice: z.coerce.number().optional(),
   maxPrice: z.coerce.number().optional(),
   limit: z.coerce.number().min(1).max(100).default(20),
@@ -61,6 +64,60 @@ router.get('/categories', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching categories:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+    });
+  }
+});
+
+/**
+ * @openapi
+ * /api/listings/cities:
+ *   get:
+ *     tags:
+ *       - Listings
+ *     summary: Получить список городов
+ *     description: Возвращает список всех уникальных городов из объявлений
+ *     responses:
+ *       200:
+ *         description: Список городов
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ */
+router.get('/cities', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('listings')
+      .select('location')
+      .not('location', 'is', null);
+
+    if (error) throw error;
+
+    // Извлекаем уникальные города
+    const cities = [...new Set(
+      data
+        .map((item: any) => item.location)
+        .filter(Boolean)
+        .map((loc: string) => loc.split(',')[0].trim()) // Берем только город (до запятой)
+    )].sort();
+
+    res.json({
+      success: true,
+      data: cities,
+    });
+  } catch (error) {
+    console.error('Error fetching cities:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -140,7 +197,14 @@ router.get('/categories', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const filters = listingsQuerySchema.parse(req.query);
-    const { data, count } = await listingService.getListings(filters);
+
+    // Поддержка как location, так и city параметров
+    const cityFilter = filters.location || filters.city;
+
+    const { data, count } = await listingService.getListings({
+      ...filters,
+      city: cityFilter,
+    });
 
     res.json({
       success: true,
