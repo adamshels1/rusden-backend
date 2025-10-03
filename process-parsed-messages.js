@@ -143,6 +143,9 @@ async function processMessages() {
   let processed = 0;
   let skipped = 0;
 
+  // Функция задержки
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
   for (const msg of messages) {
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`📝 Сообщение ${msg.id}`);
@@ -193,6 +196,9 @@ async function processMessages() {
     try {
       console.log('🤖 Обработка через AI...');
       const aiResult = await categorizeMessage(msg.text);
+
+      // Задержка 2 секунды между AI-запросами
+      await delay(2000);
 
       // Загружаем картинки в Supabase Storage
       const imageUrls = [];

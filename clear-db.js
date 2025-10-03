@@ -1,5 +1,7 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -33,7 +35,24 @@ async function clearDatabase() {
     console.log('✅ Все raw_messages удалены');
   }
 
-  console.log('\n✅ База данных очищена!');
+  // Очищаем папку с картинками
+  const imagesDir = path.resolve(__dirname, 'scripts/images');
+  if (fs.existsSync(imagesDir)) {
+    const files = fs.readdirSync(imagesDir);
+    files.forEach(file => {
+      fs.unlinkSync(path.join(imagesDir, file));
+    });
+    console.log(`✅ Удалено ${files.length} картинок из scripts/images`);
+  }
+
+  // Очищаем JSON файл
+  const jsonPath = path.resolve(__dirname, 'scripts/parsed_messages.json');
+  if (fs.existsSync(jsonPath)) {
+    fs.unlinkSync(jsonPath);
+    console.log('✅ Удален parsed_messages.json');
+  }
+
+  console.log('\n✅ База данных и файлы очищены!');
 }
 
 clearDatabase().catch(console.error);
