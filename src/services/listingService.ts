@@ -163,7 +163,20 @@ export class ListingService {
       throw error;
     }
 
-    return data;
+    // Преобразуем имена файлов в полные URL Supabase Storage
+    const listingsWithImages = data?.map(listing => {
+      if (listing.images && Array.isArray(listing.images)) {
+        listing.images = listing.images.map((filename: string) => {
+          const { data } = supabase.storage
+            .from('listings-images')
+            .getPublicUrl(filename);
+          return data.publicUrl;
+        });
+      }
+      return listing;
+    });
+
+    return listingsWithImages;
   }
 }
 

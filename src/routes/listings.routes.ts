@@ -18,6 +18,58 @@ const listingsQuerySchema = z.object({
 
 /**
  * @openapi
+ * /api/listings/categories:
+ *   get:
+ *     tags:
+ *       - Listings
+ *     summary: Получить список категорий
+ *     description: Возвращает список всех доступных категорий объявлений
+ *     responses:
+ *       200:
+ *         description: Список категорий
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                       label:
+ *                         type: string
+ */
+router.get('/categories', async (req, res) => {
+  try {
+    const categories = [
+      { name: 'realty', label: 'Недвижимость' },
+      { name: 'job', label: 'Работа' },
+      { name: 'service', label: 'Услуги' },
+      { name: 'goods', label: 'Товары' },
+      { name: 'event', label: 'События' },
+    ];
+
+    res.json({
+      success: true,
+      data: categories,
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+    });
+  }
+});
+
+/**
+ * @openapi
  * /api/listings:
  *   get:
  *     tags:
@@ -169,6 +221,16 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Listing not found',
+      });
+    }
+
+    // Преобразуем имена файлов в полные URL Supabase Storage
+    if (data.images && Array.isArray(data.images)) {
+      data.images = data.images.map((filename: string) => {
+        const { data: urlData } = supabase.storage
+          .from('listings-images')
+          .getPublicUrl(filename);
+        return urlData.publicUrl;
       });
     }
 
