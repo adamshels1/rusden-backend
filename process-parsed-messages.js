@@ -185,13 +185,13 @@ async function processMessages() {
         channel_id: channel.id,
         telegram_message_id: msg.id,
         raw_text: msg.text,
-        author_info: {
+        author_info: msg.author ? {
           id: msg.author.id,
           username: msg.author.username,
           firstName: msg.author.firstName,
           lastName: msg.author.lastName,
           phone: msg.author.phone,
-        },
+        } : null,
         media_urls: msg.images,
         message_date: msg.date,
       })
