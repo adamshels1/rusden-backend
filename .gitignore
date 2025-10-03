@@ -29,3 +29,6 @@ test-*.js
 migrate-storage.js
 upload-images-to-supabase.js
 parsed_messages.json
+
+# Images from parsing
+scripts/images/

@@ -163,13 +163,18 @@ export class ListingService {
       throw error;
     }
 
-    // Преобразуем имена файлов в полные URL Supabase Storage
+    // Преобразуем имена файлов в полные URL Supabase Storage (только если это не полный URL)
     const listingsWithImages = data?.map(listing => {
       if (listing.images && Array.isArray(listing.images)) {
-        listing.images = listing.images.map((filename: string) => {
+        listing.images = listing.images.map((imageUrl: string) => {
+          // Если это уже полный URL, возвращаем как есть
+          if (imageUrl.startsWith('http')) {
+            return imageUrl;
+          }
+          // Если это имя файла, формируем полный URL
           const { data } = supabase.storage
             .from('listings-images')
-            .getPublicUrl(filename);
+            .getPublicUrl(imageUrl);
           return data.publicUrl;
         });
       }

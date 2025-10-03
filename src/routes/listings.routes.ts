@@ -224,12 +224,17 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // Преобразуем имена файлов в полные URL Supabase Storage
+    // Преобразуем имена файлов в полные URL Supabase Storage (только если это не полный URL)
     if (data.images && Array.isArray(data.images)) {
-      data.images = data.images.map((filename: string) => {
+      data.images = data.images.map((imageUrl: string) => {
+        // Если это уже полный URL, возвращаем как есть
+        if (imageUrl.startsWith('http')) {
+          return imageUrl;
+        }
+        // Если это имя файла, формируем полный URL
         const { data: urlData } = supabase.storage
           .from('listings-images')
-          .getPublicUrl(filename);
+          .getPublicUrl(imageUrl);
         return urlData.publicUrl;
       });
     }
