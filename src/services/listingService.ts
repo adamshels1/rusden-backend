@@ -134,7 +134,7 @@ export class ListingService {
   }) {
     let query = supabase
       .from('listings')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('is_active', true)
       .order('posted_date', { ascending: false });
 
@@ -154,7 +154,7 @@ export class ListingService {
       query = query.lte('price', filters.maxPrice);
     }
 
-    const { data, error } = await query
+    const { data, error, count } = await query
       .limit(filters.limit || 20)
       .range(filters.offset || 0, (filters.offset || 0) + (filters.limit || 20) - 1);
 
@@ -181,7 +181,7 @@ export class ListingService {
       return listing;
     });
 
-    return listingsWithImages;
+    return { data: listingsWithImages, count };
   }
 }
 

@@ -140,14 +140,15 @@ router.get('/categories', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const filters = listingsQuerySchema.parse(req.query);
-    const listings = await listingService.getListings(filters);
+    const { data, count } = await listingService.getListings(filters);
 
     res.json({
       success: true,
-      data: listings,
+      data,
       meta: {
         limit: filters.limit,
         offset: filters.offset,
+        total: count,
       },
     });
   } catch (error: any) {
