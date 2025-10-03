@@ -126,60 +126,69 @@ async function getChannelMessages(username, retryCount = 0) {
 (async () => {
   console.log('\n🚀 Запуск парсера с сохранением в JSON...\n');
 
-  const channel = 'antalia_sales';
+  const channels = [
+    'realty_in_turkey', 
+    // 'antalia_sales'
+  ];
   const parsedData = [];
 
   try {
-    const result = await getChannelMessages(channel);
+    for (const channel of channels) {
+      console.log(`📱 Парсинг канала: @${channel}\n`);
 
-    console.log(`📊 Найдено сообщений: ${result.messages.length}\n`);
+      const result = await getChannelMessages(channel);
 
-    let processedCount = 0;
-    for (let index = 0; index < result.messages.length; index++) {
-      const msg = result.messages[index];
+      console.log(`📊 Найдено сообщений: ${result.messages.length}\n`);
 
-      if (msg._ === 'message' && msg.message) {
-        processedCount++;
-        console.log(`⏳ Обработка сообщения ${processedCount} (${index + 1}/${result.messages.length})...`);
+      let processedCount = 0;
+      for (let index = 0; index < result.messages.length; index++) {
+        const msg = result.messages[index];
 
-        const messageData = {
-          id: msg.id,
-          date: new Date(msg.date * 1000).toISOString(),
-          text: msg.message,
-          author: null,
-          images: [],
-          hasButtons: !!msg.reply_markup,
-        };
+        if (msg._ === 'message' && msg.message) {
+          processedCount++;
+          console.log(`⏳ Обработка сообщения ${processedCount} (${index + 1}/${result.messages.length})...`);
 
-        // Информация об авторе
-        if (msg.from_id) {
-          const author = result.users.find(u => u.id === msg.from_id.user_id);
-          if (author) {
-            messageData.author = {
-              id: author.id,
-              firstName: author.first_name || '',
-              lastName: author.last_name || '',
-              username: author.username || null,
-              phone: author.phone ? `+${author.phone}` : null,
-            };
+          const messageData = {
+            id: msg.id,
+            date: new Date(msg.date * 1000).toISOString(),
+            text: msg.message,
+            author: null,
+            images: [],
+            hasButtons: !!msg.reply_markup,
+          };
 
-            console.log(`  👤 Автор: ${author.first_name || ''} ${author.last_name || ''} ${author.username ? `(@${author.username})` : ''}`);
+          // Информация об авторе
+          if (msg.from_id) {
+            const author = result.users.find(u => u.id === msg.from_id.user_id);
+            if (author) {
+              messageData.author = {
+                id: author.id,
+                firstName: author.first_name || '',
+                lastName: author.last_name || '',
+                username: author.username || null,
+                phone: author.phone ? `+${author.phone}` : null,
+              };
+
+              console.log(`  👤 Автор: ${author.first_name || ''} ${author.last_name || ''} ${author.username ? `(@${author.username})` : ''}`);
+            }
           }
-        }
 
-        // Скачиваем фото
-        if (msg.media && msg.media._ === 'messageMediaPhoto' && msg.media.photo) {
-          console.log('  ⬇️  Скачиваю фото...');
-          await sleep(1000);
-          const fileName = await downloadPhoto(msg.media.photo, msg.id);
-          if (fileName) {
-            messageData.images.push(fileName);
-            console.log(`  ✅ Сохранено: ${fileName}`);
+          // Скачиваем фото
+          if (msg.media && msg.media._ === 'messageMediaPhoto' && msg.media.photo) {
+            console.log('  ⬇️  Скачиваю фото...');
+            await sleep(1000);
+            const fileName = await downloadPhoto(msg.media.photo, msg.id);
+            if (fileName) {
+              messageData.images.push(fileName);
+              console.log(`  ✅ Сохранено: ${fileName}`);
+            }
           }
-        }
 
-        parsedData.push(messageData);
+          parsedData.push(messageData);
+        }
       }
+
+      console.log(`\n✅ Канал @${channel} обработан\n`);
     }
 
     // Сохраняем в JSON

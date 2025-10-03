@@ -5,10 +5,6 @@ const fs = require('fs');
 
 console.log('🚀 Запуск полного флоу парсинга Telegram каналов\n');
 
-const CHANNELS = [
-  { username: '@realty_in_turkey', title: 'Турция недвижимость | Аренда' },
-];
-
 async function runFullFlow() {
   try {
     // 1. Парсинг Telegram каналов
@@ -16,22 +12,10 @@ async function runFullFlow() {
     console.log('📡 Этап 1: Парсинг Telegram каналов');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-    for (const channel of CHANNELS) {
-      console.log(`📱 Парсинг канала: ${channel.username}`);
-
-      try {
-        execSync(
-          `cd scripts && node parser-json.js ${channel.username}`,
-          {
-            stdio: 'inherit',
-            timeout: 120000 // 2 минуты на канал
-          }
-        );
-        console.log(`✅ Канал ${channel.username} спарсен\n`);
-      } catch (error) {
-        console.log(`⚠️  Парсинг канала ${channel.username} завершен с ошибкой (возможно таймаут)\n`);
-      }
-    }
+    execSync('cd scripts && node parser-json.js', {
+      stdio: 'inherit',
+      timeout: 300000 // 5 минут на все каналы
+    });
 
     // Проверяем наличие файла
     const parsedFile = path.resolve(__dirname, 'scripts/parsed_messages.json');
