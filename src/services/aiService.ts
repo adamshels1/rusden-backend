@@ -1,7 +1,7 @@
 import { groq } from '../config/groq';
 
 interface AICategorizationResult {
-  category: 'realty' | 'job' | 'service' | 'goods' | 'event' | 'other';
+  category: 'realty' | 'job' | 'service' | 'goods' | 'auto' | 'event';
   subcategory: string | null;
   title: string;
   price_amount: number | null;
@@ -35,9 +35,9 @@ export class AIService {
 - realty: недвижимость (аренда, продажа)
 - job: работа, вакансии
 - service: услуги (юристы, врачи, мастера)
-- goods: товары (мебель, техника, авто)
-- event: мероприятия, встречи
-- other: все остальное
+- goods: товары (мебель, техника)
+- auto: автомобили, транспорт
+- event: мероприятия, встречи, информационные сообщения
 
 Подкатегории для realty:
 - rent_long: долгосрочная аренда
@@ -63,7 +63,7 @@ ${text}
 
 Верни результат в JSON формате:
 {
-  "category": "realty|job|service|goods|event|other",
+  "category": "realty|job|service|goods|auto|event",
   "subcategory": "string или null",
   "title": "краткое описание объявления (до 100 символов)",
   "price_amount": number или null,

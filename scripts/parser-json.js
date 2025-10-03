@@ -128,7 +128,8 @@ async function getChannelMessages(username, retryCount = 0) {
 
   const channels = [
     // 'realty_in_turkey', 
-    'antalia_sales'
+    // 'antalia_sales',
+    'turkey_obyavlenia_uslugi'
   ];
   const parsedData = [];
 
