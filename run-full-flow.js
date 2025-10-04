@@ -25,7 +25,8 @@ async function runFullFlow() {
     }
 
     const messages = JSON.parse(fs.readFileSync(parsedFile, 'utf8'));
-    console.log(`✅ Найдено ${messages.length} сообщений\n`);
+    console.log(`✅ Найдено ${messages.length} сообщений`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     // 2. Обработка через AI и сохранение в БД
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

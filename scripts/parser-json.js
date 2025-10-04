@@ -98,7 +98,7 @@ async function getChannelMessages(username, retryCount = 0) {
         channel_id: resolvedPeer.chats[0].id,
         access_hash: resolvedPeer.chats[0].access_hash,
       },
-      limit: 50, // Увеличил лимит
+      limit: 5, // Увеличил лимит
       offset_id: 0,
       offset_date: 0,
       add_offset: 0,
@@ -127,10 +127,10 @@ async function getChannelMessages(username, retryCount = 0) {
   console.log('\n🚀 Запуск парсера с сохранением в JSON...\n');
 
   const channels = [
-    // 'realty_in_turkey', 
+    'realty_in_turkey', 
     // 'antalia_sales',
     // 'turkey_obyavlenia_uslugi'
-    'rabota_antaliai'
+    // 'rabota_antaliai'
   ];
   const parsedData = [];
 
@@ -200,7 +200,9 @@ async function getChannelMessages(username, retryCount = 0) {
     console.log(`\n✅ Парсинг завершен!`);
     console.log(`📁 Сохранено ${parsedData.length} сообщений в: parsed_messages.json\n`);
 
+    process.exit(0);
   } catch (error) {
     console.error('❌ Ошибка:', error.error_message || error.message);
+    process.exit(1);
   }
 })();
