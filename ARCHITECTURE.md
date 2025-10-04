@@ -123,7 +123,30 @@ GET  /health                    -- Healthcheck
 
 ### 5. Автоматизация
 
-**Vercel Cron Jobs:**
+**Локальный запуск с cron-планировщиком:**
+
+```bash
+# Запуск с автоматическим повтором (каждые 30 минут)
+node run-full-flow.js
+
+# Одиночный запуск
+RUN_ONCE=true node run-full-flow.js
+
+# Свое расписание (каждый час)
+CRON_SCHEDULE="0 * * * *" node run-full-flow.js
+
+# Каждые 5 минут
+CRON_SCHEDULE="*/5 * * * *" node run-full-flow.js
+```
+
+**Формат cron расписания:**
+- `*/30 * * * *` - каждые 30 минут (по умолчанию)
+- `0 * * * *` - каждый час
+- `0 */2 * * *` - каждые 2 часа
+- `0 9 * * *` - каждый день в 9:00
+- `0 9,18 * * *` - каждый день в 9:00 и 18:00
+
+**Vercel Cron Jobs (Production):**
 ```json
 {
   "path": "/api/cron/parse",
@@ -192,8 +215,9 @@ TELEGRAM_API_HASH
 
 **Локально:**
 ```bash
-npm run dev                 # Запуск сервера
-npm run parse:full          # Ручной парсинг
+npm run dev                              # Запуск сервера
+node run-full-flow.js                    # Полный флоу с автоповтором
+RUN_ONCE=true node run-full-flow.js      # Одиночный запуск парсинга
 ```
 
 **Production (Vercel):**

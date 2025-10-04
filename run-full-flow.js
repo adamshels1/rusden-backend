@@ -2,10 +2,22 @@ require('dotenv').config();
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const cron = require('node-cron');
+
+// Расписание cron (по умолчанию каждые 30 минут)
+const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/30 * * * *';
+const RUN_ONCE = process.env.RUN_ONCE === 'true';
 
 console.log('🚀 Запуск полного флоу парсинга Telegram каналов\n');
+if (!RUN_ONCE) {
+  console.log(`⏰ Режим: по расписанию (${CRON_SCHEDULE})`);
+  console.log('💡 Для одиночного запуска: RUN_ONCE=true node run-full-flow.js\n');
+}
 
 async function runFullFlow() {
+  const startTime = new Date();
+  console.log(`\n🕐 Запуск: ${startTime.toLocaleString('ru-RU')}`);
+
   try {
     // 1. Парсинг Telegram каналов
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -47,10 +59,29 @@ async function runFullFlow() {
     console.log('   Swagger: http://localhost:3000/api-docs');
     console.log('   Категории: http://localhost:3000/api/listings?category=goods');
 
+    const endTime = new Date();
+    const duration = Math.round((endTime - startTime) / 1000);
+    console.log(`\n⏱️  Время выполнения: ${duration} сек`);
+
   } catch (error) {
     console.error('❌ Ошибка:', error.message);
-    process.exit(1);
+    if (RUN_ONCE) {
+      process.exit(1);
+    }
   }
 }
 
-runFullFlow();
+// Запуск
+if (RUN_ONCE) {
+  runFullFlow().then(() => process.exit(0));
+} else {
+  // Запускаем сразу при старте
+  runFullFlow();
+
+  // Настраиваем периодический запуск по расписанию
+  cron.schedule(CRON_SCHEDULE, () => {
+    runFullFlow();
+  });
+
+  console.log('✅ Планировщик запущен. Нажмите Ctrl+C для остановки.');
+}
