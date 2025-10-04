@@ -61,7 +61,7 @@ const SYSTEM_PROMPT = `Ты — AI-агент для классификации 
   "confidence": 0.0-1.0
 }`;
 
-async function categorizeMessage(text, author) {
+async function categorizeMessage(text, author, defaultCity) {
   let userPrompt = `Классифицируй это объявление:\n\n${text}`;
 
   // Добавляем контакты автора если есть
@@ -69,6 +69,11 @@ async function categorizeMessage(text, author) {
     userPrompt += `\n\nКонтактная информация автора:\n`;
     if (author.phone) userPrompt += `Телефон: ${author.phone}\n`;
     if (author.username) userPrompt += `Telegram: @${author.username}\n`;
+  }
+
+  // Добавляем город по умолчанию
+  if (defaultCity) {
+    userPrompt += `\n\nПРИМЕЧАНИЕ: Если в тексте не указан конкретный город, используй "${defaultCity}" как значение для location.city.`;
   }
 
   const completion = await groq.chat.completions.create({
@@ -208,10 +213,10 @@ async function processMessages() {
     // Категоризируем через AI
     try {
       console.log('🤖 Обработка через AI...');
-      const aiResult = await categorizeMessage(msg.text, msg.author);
+      const aiResult = await categorizeMessage(msg.text, msg.author, msg.default_city);
 
-      // Задержка 2 секунды между AI-запросами
-      await delay(2000);
+      // Задержка 1 секунда между AI-запросами (ускоряем обработку)
+      await delay(1000);
 
       // Валидация контактов
       const hasValidContact =

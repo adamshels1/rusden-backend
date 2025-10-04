@@ -45,10 +45,18 @@ async function runFullFlow() {
     console.log('🤖 Этап 2: Обработка через AI и сохранение в БД');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-    execSync('node process-parsed-messages.js', {
-      stdio: 'inherit',
-      timeout: 300000 // 5 минут на обработку
-    });
+    try {
+      execSync('node process-parsed-messages.js', {
+        stdio: 'inherit',
+        timeout: 600000 // 10 минут на обработку (для большого количества сообщений)
+      });
+    } catch (error) {
+      if (error.code === 'ETIMEDOUT') {
+        console.log('\n⚠️  Обработка превысила таймаут, но продолжаем...');
+      } else {
+        throw error;
+      }
+    }
 
     // 3. Очистка временных файлов
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

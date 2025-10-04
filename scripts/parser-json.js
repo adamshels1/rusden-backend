@@ -98,7 +98,7 @@ async function getChannelMessages(username, retryCount = 0) {
         channel_id: resolvedPeer.chats[0].id,
         access_hash: resolvedPeer.chats[0].access_hash,
       },
-      limit: 20, // Увеличил лимит
+      limit: 10, // Ограничиваем до 10 последних сообщений для быстрой обработки
       offset_id: 0,
       offset_date: 0,
       add_offset: 0,
@@ -127,19 +127,21 @@ async function getChannelMessages(username, retryCount = 0) {
   console.log('\n🚀 Запуск парсера с сохранением в JSON...\n');
 
   const channels = [
-    'realty_in_turkey', 
-    'antalia_sales',
-    'turkey_obyavlenia_uslugi',
-    'rabota_antaliai',
-    'antalia2'
+    { username: 'realty_in_turkey', default_city: null },
+    { username: 'antalia_sales', default_city: 'Анталия' },
+    { username: 'turkey_obyavlenia_uslugi', default_city: null },
+    { username: 'rabota_antaliai', default_city: 'Анталия' },
+    { username: 'antalia2', default_city: 'Анталия' }
   ];
   const parsedData = [];
 
   try {
     for (const channel of channels) {
-      console.log(`📱 Парсинг канала: @${channel}\n`);
+      const channelConfig = typeof channel === 'string' ? { username: channel } : channel;
+      const cityInfo = channelConfig.default_city ? ` (город: ${channelConfig.default_city})` : '';
+      console.log(`📱 Парсинг канала: @${channelConfig.username}${cityInfo}\n`);
 
-      const result = await getChannelMessages(channel);
+      const result = await getChannelMessages(channelConfig.username);
 
       console.log(`📊 Найдено сообщений: ${result.messages.length}\n`);
 
@@ -158,6 +160,7 @@ async function getChannelMessages(username, retryCount = 0) {
             author: null,
             images: [],
             hasButtons: !!msg.reply_markup,
+            ...(channelConfig.default_city && { default_city: channelConfig.default_city }),
           };
 
           // Информация об авторе
@@ -191,7 +194,7 @@ async function getChannelMessages(username, retryCount = 0) {
         }
       }
 
-      console.log(`\n✅ Канал @${channel} обработан\n`);
+      console.log(`\n✅ Канал @${channelConfig.username} обработан\n`);
     }
 
     // Сохраняем в JSON
