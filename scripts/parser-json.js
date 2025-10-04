@@ -98,7 +98,7 @@ async function getChannelMessages(username, retryCount = 0) {
         channel_id: resolvedPeer.chats[0].id,
         access_hash: resolvedPeer.chats[0].access_hash,
       },
-      limit: 5, // Увеличил лимит
+      limit: 20, // Увеличил лимит
       offset_id: 0,
       offset_date: 0,
       add_offset: 0,
@@ -128,9 +128,10 @@ async function getChannelMessages(username, retryCount = 0) {
 
   const channels = [
     'realty_in_turkey', 
-    // 'antalia_sales',
-    // 'turkey_obyavlenia_uslugi'
-    // 'rabota_antaliai'
+    'antalia_sales',
+    'turkey_obyavlenia_uslugi',
+    'rabota_antaliai',
+    'antalia2'
   ];
   const parsedData = [];
 
