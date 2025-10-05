@@ -1,10 +1,31 @@
 import { Router } from 'express';
 import { ListingService } from '../services/listingService';
+import { AIModerationService } from '../services/aiModerationService';
 import { supabase } from '../config/supabase';
 import { z } from 'zod';
+import multer from 'multer';
+import sharp from 'sharp';
+import { randomUUID } from 'crypto';
 
 const router = Router();
 const listingService = new ListingService();
+const moderationService = new AIModerationService();
+
+// Настройка multer для загрузки в память
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB максимум
+    files: 4, // максимум 4 файла
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Только изображения разрешены'));
+    }
+  },
+});
 
 // Схема валидации фильтров
 const listingsQuerySchema = z.object({
@@ -377,6 +398,184 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Internal server error',
+    });
+  }
+});
+
+// Схема валидации для создания объявления
+const createListingSchema = z.object({
+  title: z.string().min(5, 'Заголовок должен содержать минимум 5 символов'),
+  description: z.string().min(10, 'Описание должно содержать минимум 10 символов'),
+  category: z.enum(['realty', 'job', 'service', 'goods', 'auto']),
+  subcategory: z.string().optional(),
+  price: z.number().optional(),
+  currency: z.enum(['EUR', 'USD', 'TRY']).optional(),
+  location: z.string().optional(),
+  contact_phone: z.string().optional(),
+  contact_telegram: z.string().optional(),
+});
+
+/**
+ * @openapi
+ * /api/listings:
+ *   post:
+ *     tags:
+ *       - Listings
+ *     summary: Создать новое объявление
+ *     description: Создает новое объявление с AI модерацией
+ */
+router.post('/', upload.array('images', 4), async (req, res) => {
+  try {
+    console.log('📥 Received POST request');
+    console.log('Body:', req.body);
+    console.log('Files:', req.files?.length || 0);
+
+    // Валидация данных
+    const listingData = createListingSchema.parse(JSON.parse(req.body.data || '{}'));
+
+    // Базовая валидация
+    const basicValidation = moderationService.validateBasicRules({
+      title: listingData.title,
+      description: listingData.description,
+      category: listingData.category,
+      subcategory: listingData.subcategory,
+      phone: listingData.contact_phone,
+      telegram: listingData.contact_telegram,
+      location: listingData.location,
+    });
+
+    if (!basicValidation.valid) {
+      console.log('❌ Basic validation failed:', basicValidation.reason);
+      return res.status(400).json({
+        success: false,
+        error: basicValidation.reason,
+      });
+    }
+
+    console.log('✅ Basic validation passed');
+
+    // AI модерация
+    console.log('🤖 Starting AI moderation...');
+    const moderation = await moderationService.moderateListing({
+      title: listingData.title,
+      description: listingData.description,
+      category: listingData.category,
+      subcategory: listingData.subcategory,
+      phone: listingData.contact_phone,
+      telegram: listingData.contact_telegram,
+      location: listingData.location,
+    });
+
+    console.log('🤖 AI moderation result:', moderation);
+
+    if (!moderation.approved) {
+      console.log('❌ AI moderation failed:', moderation.reason);
+      return res.status(400).json({
+        success: false,
+        error: moderation.reason || 'Объявление не прошло модерацию',
+      });
+    }
+
+    console.log('✅ AI moderation passed');
+
+    // Исправляем возможные опечатки AI в категории
+    const categoryMap: Record<string, string> = {
+      'reality': 'realty',
+      'realty': 'realty',
+      'job': 'job',
+      'service': 'service',
+      'goods': 'goods',
+      'auto': 'auto',
+    };
+    const finalCategory = categoryMap[moderation.category.toLowerCase()] || moderation.category;
+
+    // Обработка и загрузка изображений
+    const imageUrls: string[] = [];
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files) {
+        try {
+          // Сжатие изображения
+          const compressedBuffer = await sharp(file.buffer)
+            .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+            .jpeg({ quality: 85 })
+            .toBuffer();
+
+          // Генерация уникального имени файла
+          const filename = `${randomUUID()}.jpg`;
+
+          // Загрузка в Supabase Storage
+          const { data, error } = await supabase.storage
+            .from('listings-images')
+            .upload(filename, compressedBuffer, {
+              contentType: 'image/jpeg',
+              cacheControl: '3600',
+            });
+
+          if (error) {
+            console.error('Error uploading image:', error);
+            continue;
+          }
+
+          // Получение публичного URL
+          const { data: urlData } = supabase.storage
+            .from('listings-images')
+            .getPublicUrl(filename);
+
+          imageUrls.push(urlData.publicUrl);
+        } catch (imgError) {
+          console.error('Error processing image:', imgError);
+        }
+      }
+    }
+
+    // Создание объявления
+    const { data: listing, error: insertError } = await supabase
+      .from('listings')
+      .insert({
+        category: finalCategory,
+        subcategory: moderation.subcategory,
+        title: listingData.title,
+        description: listingData.description,
+        price: listingData.price,
+        currency: listingData.currency,
+        location: listingData.location,
+        contact_info: {
+          phone: listingData.contact_phone,
+          telegram: listingData.contact_telegram?.replace(/^@/, ''),
+        },
+        images: imageUrls,
+        posted_date: new Date().toISOString(),
+        ai_confidence: moderation.confidence,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error creating listing:', insertError);
+      return res.status(500).json({
+        success: false,
+        error: 'Ошибка при создании объявления',
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      data: listing,
+      message: 'Объявление успешно создано и прошло модерацию',
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Некорректные данные',
+        details: error.issues,
+      });
+    }
+
+    console.error('Error creating listing:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Внутренняя ошибка сервера',
     });
   }
 });

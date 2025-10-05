@@ -127,11 +127,11 @@ async function getChannelMessages(username, retryCount = 0) {
   console.log('\n🚀 Запуск парсера с сохранением в JSON...\n');
 
   const channels = [
-    // { username: 'realty_in_turkey', default_city: null },
+    { username: 'realty_in_turkey', default_city: null },
     { username: 'antalia_sales', default_city: 'Анталия' },
-    // { username: 'turkey_obyavlenia_uslugi', default_city: null },
-    // { username: 'rabota_antaliai', default_city: 'Анталия' },
-    // { username: 'antalia2', default_city: 'Анталия' }
+    { username: 'turkey_obyavlenia_uslugi', default_city: null },
+    { username: 'rabota_antaliai', default_city: 'Анталия' },
+    { username: 'antalia2', default_city: 'Анталия' }
   ];
   const parsedData = [];
 
