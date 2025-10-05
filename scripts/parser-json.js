@@ -98,7 +98,7 @@ async function getChannelMessages(username, retryCount = 0) {
         channel_id: resolvedPeer.chats[0].id,
         access_hash: resolvedPeer.chats[0].access_hash,
       },
-      limit: 10, // Ограничиваем до 10 последних сообщений для быстрой обработки
+      limit: 30, // Ограничиваем до 10 последних сообщений для быстрой обработки
       offset_id: 0,
       offset_date: 0,
       add_offset: 0,
@@ -127,11 +127,11 @@ async function getChannelMessages(username, retryCount = 0) {
   console.log('\n🚀 Запуск парсера с сохранением в JSON...\n');
 
   const channels = [
-    { username: 'realty_in_turkey', default_city: null },
+    // { username: 'realty_in_turkey', default_city: null },
     { username: 'antalia_sales', default_city: 'Анталия' },
-    { username: 'turkey_obyavlenia_uslugi', default_city: null },
-    { username: 'rabota_antaliai', default_city: 'Анталия' },
-    { username: 'antalia2', default_city: 'Анталия' }
+    // { username: 'turkey_obyavlenia_uslugi', default_city: null },
+    // { username: 'rabota_antaliai', default_city: 'Анталия' },
+    // { username: 'antalia2', default_city: 'Анталия' }
   ];
   const parsedData = [];
 
@@ -179,14 +179,39 @@ async function getChannelMessages(username, retryCount = 0) {
             }
           }
 
-          // Скачиваем фото
+          // Скачиваем фото (до 4 штук)
+          const photosToDownload = [];
+
+          // Одиночное фото
           if (msg.media && msg.media._ === 'messageMediaPhoto' && msg.media.photo) {
-            console.log('  ⬇️  Скачиваю фото...');
-            await sleep(1000);
-            const fileName = await downloadPhoto(msg.media.photo, msg.id);
-            if (fileName) {
-              messageData.images.push(fileName);
-              console.log(`  ✅ Сохранено: ${fileName}`);
+            photosToDownload.push(msg.media.photo);
+          }
+
+          // Группа медиа (альбом) - ищем другие сообщения с тем же grouped_id
+          if (msg.grouped_id) {
+            const groupedMessages = result.messages.filter(m =>
+              m.grouped_id && m.grouped_id.toString() === msg.grouped_id.toString()
+            );
+
+            for (const groupMsg of groupedMessages) {
+              if (groupMsg.media && groupMsg.media._ === 'messageMediaPhoto' && groupMsg.media.photo) {
+                photosToDownload.push(groupMsg.media.photo);
+              }
+            }
+          }
+
+          // Ограничиваем до 4 фото
+          const limitedPhotos = photosToDownload.slice(0, 4);
+
+          if (limitedPhotos.length > 0) {
+            console.log(`  ⬇️  Скачиваю ${limitedPhotos.length} фото...`);
+            for (let i = 0; i < limitedPhotos.length; i++) {
+              await sleep(1000);
+              const fileName = await downloadPhoto(limitedPhotos[i], `${msg.id}_${i}`);
+              if (fileName) {
+                messageData.images.push(fileName);
+                console.log(`  ✅ Сохранено ${i + 1}/${limitedPhotos.length}: ${fileName}`);
+              }
             }
           }
 
