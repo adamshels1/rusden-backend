@@ -1,4 +1,4 @@
-name: Parse Telegram Channels
+name: Parse Telegram Channels (Full Flow)
 
 on:
   schedule:
@@ -13,30 +13,54 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Trigger Telegram Parsing
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
       run: |
-        echo "🚀 Starting Telegram channels parsing..."
+        cd rusden-backend
+        npm install
 
-        response=$(curl -s -X POST https://rusden-backend.onrender.com/api/cron/parse \
-          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-          -H "Content-Type: application/json")
-
-        echo "📊 Response: $response"
-
-        # Проверяем успешность ответа
-        if echo "$response" | grep -q '"success":true'; then
-          echo "✅ Parsing completed successfully!"
-        else
-          echo "❌ Parsing failed!"
-          exit 1
-        fi
-
-    - name: Wait and Verify
+    - name: Run Full Parsing Flow
       run: |
-        echo "⏳ Waiting 10 seconds for processing..."
-        sleep 10
+        cd rusden-backend
+        echo "🚀 Starting complete Telegram parsing flow..."
 
-        echo "🔍 Verifying API is still responsive..."
-        curl -s https://rusden-backend.onrender.com/health || exit 1
+        # Запуск полного флоу парсинга
+        RUN_ONCE=true node run-full-flow.js
 
-        echo "✅ Health check passed!"
+        echo "✅ Complete parsing flow finished!"
+      env:
+        # Supabase
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+        # Groq AI
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+        # Telegram
+        TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+        TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+        API_ID: ${{ secrets.API_ID }}
+        API_HASH: ${{ secrets.API_HASH }}
+
+    - name: Verify Results
+      run: |
+        echo "🔍 Verifying API results..."
+
+        # Проверяем health endpoint
+        curl -s https://rusden-backend.onrender.com/health
+
+        # Проверяем наличие новых данных
+        response=$(curl -s https://rusden-backend.onrender.com/api/listings)
+        count=$(echo "$response" | jq '.data | // length')
+
+        echo "📊 Current listings count: $count"
+        echo "✅ Parsing completed and verified!"
