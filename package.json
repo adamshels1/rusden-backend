@@ -2,11 +2,11 @@
   "name": "rusden-backend",
   "version": "1.0.0",
   "description": "Telegram Ads Aggregator Backend API",
-  "main": "dist/server.js",
+  "main": "dist/src/server.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "parse:once": "node run-full-flow.js",
     "parse:cron": "RUN_ONCE=false node run-full-flow.js",
     "parse:production": "RUN_ONCE=true node run-full-flow.js",
