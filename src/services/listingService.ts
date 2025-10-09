@@ -21,11 +21,12 @@ export class ListingService {
     try {
       // Обрабатываем через AI
       const aiResult = await this.aiService.categorizeMessage(rawMessage.raw_text);
+      const correctedResult = this.applyCategoryHeuristics(rawMessage.raw_text, aiResult);
 
       // Сохраняем как listing
-      await this.saveListing(rawMessageId, aiResult, 'completed');
+      await this.saveListing(rawMessageId, correctedResult, 'completed');
 
-      console.log(`✅ Обработано сообщение ${rawMessageId}`);
+      console.log(`✅ Обработано сообщение ${rawMessageId} (категория: ${correctedResult.category})`);
     } catch (error) {
       console.error(`❌ Ошибка AI обработки ${rawMessageId}:`, error);
       await this.saveListing(rawMessageId, {}, 'failed');
@@ -72,17 +73,18 @@ export class ListingService {
     try {
       // AI категоризация
       const aiResult = await this.aiService.categorizeMessageWithRetry(rawMessage.raw_text);
+      const correctedResult = this.applyCategoryHeuristics(rawMessage.raw_text, aiResult);
 
       // Пропускаем спам
-      if (aiResult.is_spam) {
+      if (correctedResult.is_spam) {
         console.log('🚫 Сообщение помечено как спам, пропускаем');
-        await this.saveListing(rawMessage.id, aiResult, 'completed');
+        await this.saveListing(rawMessage.id, correctedResult, 'completed');
         return;
       }
 
       // Сохраняем в listings
-      await this.saveListing(rawMessage.id, aiResult, 'completed');
-      console.log(`✅ Сообщение обработано успешно (категория: ${aiResult.category})`);
+      await this.saveListing(rawMessage.id, correctedResult, 'completed');
+      console.log(`✅ Сообщение обработано успешно (категория: ${correctedResult.category})`);
 
     } catch (error: any) {
       console.error(`❌ Ошибка обработки сообщения ${rawMessage.telegram_message_id}:`, error.message);
@@ -105,6 +107,7 @@ export class ListingService {
     const { error } = await supabase.from('listings').insert({
       raw_message_id: rawMessageId,
       category: aiResult.category || 'goods',
+      subcategory: aiResult.subcategory,
       title: aiResult.title || 'Без названия',
       description: aiResult.description || '',
       price: aiResult.price_amount,
@@ -116,12 +119,87 @@ export class ListingService {
       },
       posted_date: new Date().toISOString(),
       ai_confidence: aiResult.confidence || 0.5,
+      ai_processing_status: status,
     });
 
     if (error) {
       console.error('❌ Ошибка сохранения в listings:', error);
       throw error;
     }
+  }
+
+  private applyCategoryHeuristics(rawText: string, aiResult: any) {
+    const result = { ...aiResult };
+    const text = (rawText || '').toLowerCase();
+
+    if (!result.description && rawText) {
+      result.description = rawText.trim();
+    }
+
+    const realtyPatterns = [
+      /\bквартир/i,
+      /\bапарт/i,
+      /\bстудия/i,
+      /\bжк\b/i,
+      /\bжилой\s+комплекс/i,
+      /\bжилкомплекс/i,
+      /\bдом\b/i,
+      /\bвилла/i,
+      /\bдуплекс/i,
+      /\bпентхаус/i,
+      /residen[ct]/i,
+    ];
+    const autoPatterns = [
+      /\bавто/i,
+      /\bмашин/i,
+      /\bcar\b/i,
+      /\bавтомоб/i,
+      /rent\s*a\s*car/i,
+      /\bтранспорт/i,
+    ];
+
+    const hasPlanNotation = /\b\d+\s*\+\s*\d\b/.test(text);
+    const hasRealtyKeyword = realtyPatterns.some(pattern => pattern.test(text));
+    const hasAutoKeyword = autoPatterns.some(pattern => pattern.test(text));
+
+    if ((hasRealtyKeyword || hasPlanNotation) && result.category !== 'realty') {
+      result.category = 'realty';
+    }
+
+    if (result.category === 'auto' && !hasAutoKeyword && (hasRealtyKeyword || hasPlanNotation)) {
+      result.category = 'realty';
+    }
+
+    if (result.category === 'realty') {
+      const salePatterns = [/продам/i, /продаю/i, /продаж/i, /продается/i];
+      const rentShortPatterns = [/краткосроч/i, /посут/i, /сутк/i, /daily/i, /на\s+недел/i, /на\s+ноч/i];
+      const rentLongPatterns = [/долгосроч/i, /долгосрок/i, /на\s+год/i, /12\s*мес/i, /12\s*месяц/i];
+      const rentWord = /аренд|сдам|сдаю/i.test(text);
+
+      const currentSubcategory = typeof result.subcategory === 'string' ? result.subcategory.toLowerCase() : '';
+
+      if (!currentSubcategory || currentSubcategory.includes('авто')) {
+        if (salePatterns.some(pattern => pattern.test(text))) {
+          result.subcategory = 'Продажа';
+        } else if (rentShortPatterns.some(pattern => pattern.test(text))) {
+          result.subcategory = 'Краткосрочная аренда';
+        } else if (rentLongPatterns.some(pattern => pattern.test(text)) || rentWord) {
+          result.subcategory = 'Аренда';
+        }
+      }
+
+      if (!result.price_currency) {
+        if (/eur|€|евро/i.test(text)) {
+          result.price_currency = 'EUR';
+        } else if (/usd|\$|доллар/i.test(text)) {
+          result.price_currency = 'USD';
+        } else if (/try|₺|лир|lira/i.test(text)) {
+          result.price_currency = 'TRY';
+        }
+      }
+    }
+
+    return result;
   }
 
   async getListings(filters: {
