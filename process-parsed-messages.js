@@ -303,6 +303,15 @@ async function processMessages() {
   console.log(`\n✅ Обработка завершена!`);
   console.log(`📊 Обработано: ${processed}`);
   console.log(`⏭️  Пропущено: ${skipped}`);
+
+  // Сохраняем количество обработанных объявлений для Telegram логгера
+  try {
+    const fs = require('fs');
+    fs.writeFileSync('scripts/listings-count.txt', processed.toString());
+    console.log(`📝 Сохранено количество объявлений: ${processed}`);
+  } catch (error) {
+    console.log('Не удалось сохранить количество объявлений:', error.message);
+  }
 }
 
 processMessages().catch(console.error);

@@ -3,10 +3,17 @@ const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const cron = require('node-cron');
+const TelegramLogger = require('./scripts/telegram-logger');
 
 // Расписание cron (по умолчанию каждые 30 минут)
 const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/30 * * * *';
 const RUN_ONCE = process.env.RUN_ONCE === 'true';
+
+// Инициализация Telegram логгера
+const telegramLogger = new TelegramLogger(
+  process.env.TELEGRAM_LOGGER_TOKEN,
+  process.env.TELEGRAM_LOGGER_CHAT_ID
+);
 
 console.log('🚀 Запуск полного флоу парсинга Telegram каналов\n');
 if (!RUN_ONCE) {
@@ -19,6 +26,9 @@ async function runFullFlow() {
   console.log(`\n🕐 Запуск: ${startTime.toLocaleString('ru-RU')}`);
 
   try {
+    // Отправляем уведомление о старте парсинга
+    await telegramLogger.logParsingStart();
+
     // 1. Парсинг Telegram каналов
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📡 Этап 1: Парсинг Telegram каналов');
@@ -38,6 +48,9 @@ async function runFullFlow() {
 
     const messages = JSON.parse(fs.readFileSync(parsedFile, 'utf8'));
     console.log(`✅ Найдено ${messages.length} сообщений`);
+
+    // Отправляем статистику по найденным сообщениям
+    await telegramLogger.logParsingResult(messages.length);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     // 2. Обработка через AI и сохранение в БД
@@ -50,10 +63,16 @@ async function runFullFlow() {
         stdio: 'inherit',
         timeout: 600000 // 10 минут на обработку (для большого количества сообщений)
       });
+
+      // Отправляем уведомление об успешной обработке
+      await telegramLogger.logProcessingComplete();
     } catch (error) {
       if (error.code === 'ETIMEDOUT') {
         console.log('\n⚠️  Обработка превысила таймаут, но продолжаем...');
+        await telegramLogger.logError(`Обработка превысила таймаут, но продолжаем...`);
       } else {
+        // Отправляем уведомление об ошибке обработки
+        await telegramLogger.logError(`Ошибка при обработке сообщений: ${error.message}`);
         throw error;
       }
     }
@@ -84,6 +103,9 @@ async function runFullFlow() {
       console.log(`✅ Удалено изображений: ${deletedCount}`);
     }
 
+    const endTime = new Date();
+    const duration = Math.round((endTime - startTime) / 1000);
+
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('✅ Полный флоу завершен!');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
@@ -92,13 +114,33 @@ async function runFullFlow() {
     console.log('   API: http://localhost:3000/api/listings');
     console.log('   Swagger: http://localhost:3000/api-docs');
     console.log('   Категории: http://localhost:3000/api/listings?category=goods');
-
-    const endTime = new Date();
-    const duration = Math.round((endTime - startTime) / 1000);
     console.log(`\n⏱️  Время выполнения: ${duration} сек`);
+
+    // Получаем количество созданных объявлений
+    let listingsCount = 0;
+    try {
+      const fs = require('fs');
+      if (fs.existsSync('scripts/listings-count.txt')) {
+        listingsCount = parseInt(fs.readFileSync('scripts/listings-count.txt', 'utf8').trim());
+        fs.unlinkSync('scripts/listings-count.txt');
+      }
+    } catch (error) {
+      console.log('Не удалось прочитать количество объявлений:', error.message);
+    }
+
+    // Отправляем финальное уведомление об успешном завершении
+    await telegramLogger.logSuccess(duration, listingsCount);
 
   } catch (error) {
     console.error('❌ Ошибка:', error.message);
+
+    // Отправляем уведомление об ошибке в Telegram
+    try {
+      await telegramLogger.logError(`Критическая ошибка парсинга: ${error.message}`);
+    } catch (logError) {
+      console.error('Не удалось отправить лог в Telegram:', logError.message);
+    }
+
     if (RUN_ONCE) {
       process.exit(1);
     }

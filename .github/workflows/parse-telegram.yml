@@ -49,6 +49,10 @@ jobs:
         API_ID: ${{ secrets.API_ID }}
         API_HASH: ${{ secrets.API_HASH }}
 
+        # Telegram Logger
+        TELEGRAM_LOGGER_TOKEN: 8208905905:AAGZK3KQZ9vhwsujzWiAKXoA8hJs5T4FwAc
+        TELEGRAM_LOGGER_CHAT_ID: 7921941228
+
     - name: Verify Results
       run: |
         echo "🔍 Verifying API results..."
