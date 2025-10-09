@@ -12,11 +12,13 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --omit=dev
+RUN npm install
 
 COPY . .
 
 RUN npm run build
+
+RUN npm prune --production
 
 # Создаем директорию для скриптов и изображений
 RUN mkdir -p scripts/images
