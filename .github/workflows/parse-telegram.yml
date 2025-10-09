@@ -1,0 +1,42 @@
+name: Parse Telegram Channels
+
+on:
+  schedule:
+    # Запуск каждые 30 минут
+    - cron: '*/30 * * * *'
+
+  # Возможность запустить вручную
+  workflow_dispatch:
+
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Trigger Telegram Parsing
+      run: |
+        echo "🚀 Starting Telegram channels parsing..."
+
+        response=$(curl -s -X POST https://rusden-backend.onrender.com/api/cron/parse \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          -H "Content-Type: application/json")
+
+        echo "📊 Response: $response"
+
+        # Проверяем успешность ответа
+        if echo "$response" | grep -q '"success":true'; then
+          echo "✅ Parsing completed successfully!"
+        else
+          echo "❌ Parsing failed!"
+          exit 1
+        fi
+
+    - name: Wait and Verify
+      run: |
+        echo "⏳ Waiting 10 seconds for processing..."
+        sleep 10
+
+        echo "🔍 Verifying API is still responsive..."
+        curl -s https://rusden-backend.onrender.com/health || exit 1
+
+        echo "✅ Health check passed!"
