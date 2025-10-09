@@ -24,12 +24,10 @@ jobs:
 
     - name: Install dependencies
       run: |
-        cd rusden-backend
         npm install
 
     - name: Run Full Parsing Flow
       run: |
-        cd rusden-backend
         echo "🚀 Starting complete Telegram parsing flow..."
 
         # Запуск полного флоу парсинга
